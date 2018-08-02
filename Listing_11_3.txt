@@ -1,0 +1,67 @@
+	includelib kernel32.lib	; Windows kernel interface
+ExitProcess	proto
+v_asc		proto		; Function writes ASCII string.
+v_opn		proto		; Function opens display stream.
+v_dig1		proto		; Display byte in selected base (2-10)
+
+;	Macro "dispbs base,tail" calls v_dig1, then displays a character string.
+;		base:	Base (2 - 10) in which to display number
+;		tail:	Separation string to be output
+
+dispbs	macro	base,tail
+	mov	R11,base	; Load base for display.
+	call	v_dig1		; Display number in base [R11]
+	lea	RDX,tail	; Pointer to message to display
+	mov	R8,lengthof tail ; Number of characters to display
+	call	v_asc		; Write text string to command window.
+	endm
+
+	.code
+
+;	Main program doubles and displays contents of SSE register.
+;		1. Packed addition adds multiple numbers simultaneously.
+;		2. An inner loop displays each sum one at a time.
+
+main	proc
+
+	sub	RSP,40		; Reserve "shadow space" on stack.
+
+;	Obtain "handles" for console Input streams
+
+	call	v_opn		; Open text display stream.
+
+;	Make four passes through loop to double the value of each integer.
+
+	mov	R14,4		; Use R14 for loop counter.
+
+;	Display first eight 8-bit integers in array intlst.
+
+double:	lea	R12,intlst	; Pointer to array of 8-bit integers
+	mov	R13,7		; Loop through first 7 integers
+inloop:	dispbs	10,tab		; Display byte in decimal.
+	inc	R12		; Set pointer to next integer.
+	dec	R13		; Decrement number of bytes remaining.
+	jg	inloop		; loop until all 7 done.
+	dispbs	10,newln	; Display eighth integer.
+
+	movdqu	XMM3,xmmword ptr [intlst] ; 16 8-bit integers
+	paddb	XMM3,XMM3	; Double the value in XMM3
+;	paddusb	XMM3,XMM3	; Unsigned Saturated values in XMM3
+;	paddsb	XMM3,XMM3	; Signed Saturated values in XMM3
+	movdqu	xmmword ptr [intlst],XMM3 ; Store 16 integers
+
+	dec	R14		; Decrement passes remaining.
+	jg	double		; Loop back to double again.
+
+	add	RSP,40		; Replace "shadow space" on stack
+	mov	RCX,0		; Set exit status code to zero.
+	call	ExitProcess	; Return control to Windows.
+
+main	endp
+
+	.data
+intlst	byte	1,2,10,50,100,150,200,250 ; Eight 8-bit integers
+	byte	8 DUP (0)	; Fill remainder of double quad word.
+newln	byte	0DH,0AH		; Carriage return and line feed
+tab	byte	09H		; Horizontal tab character
+	end

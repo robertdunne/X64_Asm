@@ -1,0 +1,13 @@
+;	Function addPi adds Pi to a floating point value.
+;		XMM0: 32 bit single precision (first argument).
+
+	.code
+addPi	proc			; Subroutine thesum entry point
+	movups	XMM1,pi		; Load floating point Pi value
+	addps	XMM0,XMM1	; Add Pi to argument.
+	ret			; Return to the calling program
+addPi	endp
+
+	.data
+pi	real4	3.1416		; Approximate value of Pi
+	end

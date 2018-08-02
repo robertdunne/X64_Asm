@@ -1,0 +1,8 @@
+	includelib	kernel32.lib
+ExitProcess	proto
+	.code
+main	proc		    ; Program external name
+	mov	RCX,78	    ; Immediate load of register RCX
+	call	ExitProcess ; Return CPU control to Windows
+main	endp
+	end

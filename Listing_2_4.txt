@@ -1,0 +1,11 @@
+	includelib	kernel32.lib
+ExitProcess	proto
+	.code
+main	proc		    ; Program external name
+	mov	RCX,1	    ; Immediate load of register RCX
+	add	RCX,100	    ; Immediate add to contents of RCX
+	mov	RDX,10	    ; Register RDX loaded with decimal 10
+	sub	RCX,RDX	    ; Subtract register RDX from RCX
+	call	ExitProcess ; Return CPU control to Windows
+main	endp
+	end

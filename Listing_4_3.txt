@@ -1,0 +1,87 @@
+	includelib kernel32.lib	; Windows kernel interface
+GetStdHandle	proto		; Function to retrieve I/O handles
+WriteConsoleA	proto		; Function writes to command window
+ReadConsoleA	proto		; Function reads from command window
+Console		equ	-11	; Device code for console text output.
+Keyboard	equ	-10	; Device code for console text input.
+MaxBuf		equ	20	; Maximum input buffer size
+ExitProcess	proto
+
+	.code
+
+;	Main program that reads text message from user through command
+;	window keyin and displays it in same command window.
+;		1. Multiple lines are input until only "Enter" key pushed.
+;		2. Each character input is echoed on a separate line.
+
+main	proc
+
+	sub	RSP,40		; Reserve "shadow space" on stack.
+
+;	Obtain "handles" for console I/O streams
+
+	mov	RCX,Console	; Console standard output handle
+	call	GetStdHandle	; Returns handle in register RAX
+	mov	stdout,RAX	; Save handle of console display.
+	mov	RCX,Keyboard	; Console standard input handle
+	call	GetStdHandle	; Returns handle in register RAX
+	mov	stdin,RAX	; Save handle for keyboard input.
+
+;	Display the prompt message.
+
+nxtlin:	mov	RCX,stdout	; Handle to standard output device 
+	lea	RDX,pmsg	; Pointer to prompt message
+	mov	R8,lengthof pmsg ; Number of characters to display
+	lea	R9,nbwr		; Number of bytes actually written.
+	call	WriteConsoleA	; Write text string to command box.
+
+;	Read input line from user keyboard.
+
+	mov 	RCX,stdin	; Handle to standard input device 
+	mov	R8,MaxBuf	; Maximum length to receive
+	lea	RDX,keymsg	; Memory address to receive input
+	lea	R9,nbrd		; Number of bytes actually read.
+	call	ReadConsoleA	; Read text entered from keyboard.
+
+;	Echo line just input back to the user one character at a time.
+
+	lea	R12,keymsg	; Memory buffer containing input
+	mov	R13,nbrd	; Number of characters actually read
+
+inloop: mov	RCX,stdout	; Handle to standard output device 
+	mov	RDX,R12		; Point to next character to display
+	mov	R8,1		; Only display 1 character.
+	lea	R9,nbwr		; Number of bytes actually written.
+	call	WriteConsoleA	; Write text string to command box.
+
+	mov	RCX,stdout	; Handle to standard output device 
+	lea	RDX,newln	; Point buffer containing CR and LF.
+	mov	R8,2		; Length of CR/LF buffer.
+	lea	R9,nbwr		; Number of bytes actually written.
+	call	WriteConsoleA	; Write text string to command box.
+	inc	R12		; Set pointer to next character.
+	dec	R13		; Decrement bytes remaining.
+	jg	inloop		; Loop until message complete.
+
+;	Go get another line, but exit if only "Enter" key was input.
+
+	mov	R8,nbrd		; Length (bytes) of input message
+	cmp	R8,2		; Test if only CR and LF characters.
+	jg	nxtlin		; Loop back to get another input.
+
+	add	RSP,40		; Replace "shadow space" on stack
+	mov	RCX,0		; Set exit status code to zero.
+	call	ExitProcess	; Return control to Windows.
+
+main	endp
+
+	.data
+pmsg	byte	"Please enter text message: "
+keymsg	byte	MaxBuf DUP (?)	; Memory buffer for keyboard input
+newln	byte	0DH,0AH		; Carriage return and line feed
+stdout	qword	?		; Handle to standard output device
+nbwr	qword	?		; Number of bytes actually written
+stdin	qword	?		; Handle to standard input device
+nbrd	qword	?		; Number of bytes actually read
+
+	end
